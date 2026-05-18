@@ -1,0 +1,59 @@
+services:
+    postgres:
+        image: postgres:16-alpine
+        container_name: nest-articles-postgres
+        environment:
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASS}
+            POSTGRES_DB: ${DB_NAME}
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    redis:
+        image: redis:7-alpine
+        container_name: nest-articles-redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis-data:/data
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    api:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: nest-articles-api
+        ports:
+            - "3000:3000"
+        # read environment variables
+        environment:
+            PORT: ${PORT}
+            DB_HOST: postgres
+            DB_PORT: ${DB_PORT}
+            DB_USER: ${DB_USER}
+            DB_PASS: ${DB_PASS}
+            DB_NAME: ${DB_NAME}
+            JWT_SECRET: ${JWT_SECRET}
+            JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+            REDIS_HOST: redis
+            REDIS_PORT: ${REDIS_PORT}
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+volumes:
+    postgres-data:
+    redis-data:
